@@ -44,6 +44,19 @@ app.get('/api/files', (req, res) => {
   });
 });
 
+// Endpoint to get the content of a specific file
+app.get('/api/files/:filename', (req, res) => {
+  const filePath = path.join(SAVE_DIR, req.params.filename);
+  fs.readFile(filePath, 'utf-8', (err, data) => {
+    if (err) {
+      console.error('Error reading file:', err);
+      return res.status(500).send('Error reading file.');
+    }
+    res.send(data);
+  });
+});
+
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

@@ -106,7 +106,6 @@ Happy writing!`);
           })
           .then((response) => {
             setSavedFiles(response.data);
-            setSavedFiles((prevFiles) => [...prevFiles, filename]);
             alert('File saved successfully!');
           })
           .catch((error) => {
@@ -164,7 +163,15 @@ Happy writing!`);
             <h5>Saved Files</h5>
             <ul className="list-group">
               {savedFiles.map((file, index) => (
-                <li key={index} className="list-group-item">
+                <li key={index} className="list-group-item" onClick={() => {
+                  axios.get(`http://localhost:5001/api/files/${file}`)
+                    .then((response) => {
+                      setMarkdownText(response.data);
+                    })
+                    .catch((error) => {
+                      console.error('Error loading file:', error);
+                    });
+                }}>
                   {file}
                 </li>
               ))}
