@@ -6,6 +6,7 @@ import './App.css';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
+import axios from 'axios';
 
 marked.setOptions({
   gfm: true,
@@ -25,10 +26,10 @@ marked.setOptions({
   }
 });
 
-import { saveAs } from 'file-saver';
 import SplitPane from 'react-split-pane';
 
 const App = () => {
+  const [editorSize, setEditorSize] = useState('40%');
   const [markdownText, setMarkdownText] = useState(`# Welcome to Mento, the markdown editor
 
 This is a simple markdown editor with a live preview.
@@ -65,6 +66,7 @@ function greet() {
   - Subitem 2.2
 
 Happy writing!`);
+  const [savedFiles, setSavedFiles] = useState([]);
 
   const textareaRef = useRef(null);
   const previewRef = useRef(null);
@@ -83,12 +85,33 @@ Happy writing!`);
     }
   }, [markdownText]);
 
+  useEffect(() => {
+    // Fetch saved files from server
+    axios.get('http://localhost:5001/api/files').then((response) => {
+      setSavedFiles(response.data);
+    }).catch((error) => {
+      console.error('Error fetching saved files:', error);
+    });
+  }, []);
+
   const handleSave = () => {
     if (markdownText.trim() !== '') {
       const filename = prompt('Enter the filename for your markdown file:', 'document.md');
       if (filename) {
-        const blob = new Blob([markdownText], { type: 'text/markdown' });
-        saveAs(blob, filename);
+        // Save file on server
+        axios.post('http://localhost:5001/api/save', { filename, content: markdownText })
+          .then(() => {
+            // Fetch updated list of saved files from server
+            return axios.get('http://localhost:5001/api/files');
+          })
+          .then((response) => {
+            setSavedFiles(response.data);
+            setSavedFiles((prevFiles) => [...prevFiles, filename]);
+            alert('File saved successfully!');
+          })
+          .catch((error) => {
+            console.error('Error saving file:', error);
+          });
       }
     }
   };
@@ -135,26 +158,42 @@ Happy writing!`);
         <button className="btn btn-primary me-2" onClick={handleSave}>Save</button>
         <button className="btn btn-secondary" onClick={handleCopy}>Copy</button>
       </div>
-      <SplitPane split="vertical" minSize={200} resizerStyle={{ width: '10px', background: '#ccc', cursor: 'col-resize' }} defaultSize={localStorage.getItem('splitPos') ? parseInt(localStorage.getItem('splitPos')) : '50%'} onDragFinished={(size) => localStorage.setItem('splitPos', size)}>
-        <div className="editor-area p-3" style={{ overflow: 'auto', borderRight: '2px solid #ccc', height: '100%' }} onClick={handleEditorClick} onScroll={syncScroll}>
-          <textarea
-            ref={textareaRef}
-            className="form-control no-highlight custom-textarea"
-            value={markdownText}
-            onChange={handleTextChange}
-            placeholder="Start typing..."
-            style={{ height: '100%', width: '100%', resize: 'none', overflow: 'auto', paddingBottom: '20px', flexGrow: 1 }}
-            autoFocus
-          ></textarea>
-        </div>
-        <div ref={previewRef} className="preview-area p-3" style={{ overflow: 'auto', height: '100%', minHeight: '100%' }} onScroll={syncScrollReverse}>
-          <div
-            className="markdown-preview"
-            style={{ height: '100%', cursor: 'text' }}
-            dangerouslySetInnerHTML={{ __html: marked(markdownText) }}
-          ></div>
-        </div>
-      </SplitPane>
+      
+        <SplitPane split="vertical" minSize={100} defaultSize={300} resizerStyle={{ width: '10px', background: '#ccc', cursor: 'col-resize' }}>
+          <div className="file-list p-3" style={{ overflowY: 'auto', height: '100%', borderRight: '2px solid #ccc' }}>
+            <h5>Saved Files</h5>
+            <ul className="list-group">
+              {savedFiles.map((file, index) => (
+                <li key={index} className="list-group-item">
+                  {file}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <SplitPane split="vertical" minSize={200} resizerStyle={{ width: '10px', background: '#ccc', cursor: 'col-resize' }} size={editorSize} onDragFinished={(size) => {
+            setEditorSize(size);
+            localStorage.setItem('splitPos', size);
+          }}>
+            <div className="editor-area p-3" style={{ overflow: 'auto', height: '100%' }} onClick={handleEditorClick} onScroll={syncScroll}>
+              <textarea
+                ref={textareaRef}
+                className="form-control no-highlight custom-textarea"
+                value={markdownText}
+                onChange={handleTextChange}
+                placeholder="Start typing..."
+                style={{ height: '100%', width: '100%', resize: 'none', overflow: 'auto', paddingBottom: '20px', flexGrow: 1 }}
+                autoFocus
+              ></textarea>
+            </div>
+            <div ref={previewRef} className="preview-area p-3" style={{ overflow: 'auto', height: '100%', minHeight: '100%' }} onScroll={syncScrollReverse}>
+              <div
+                className="markdown-preview"
+                style={{ height: '100%', cursor: 'text' }}
+                dangerouslySetInnerHTML={{ __html: marked(markdownText) }}
+              ></div>
+            </div>
+          </SplitPane>
+        </SplitPane>
     </div>
   );
 };
