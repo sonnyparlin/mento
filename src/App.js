@@ -163,17 +163,18 @@ Happy writing!`);
             <h5>Saved Files</h5>
             <ul className="list-group">
               {savedFiles.map((file, index) => (
-                <li key={index} className="list-group-item" onClick={() => {
-                  axios.get(`http://localhost:5001/api/files/${file}`)
-                    .then((response) => {
-                      setMarkdownText(response.data);
-                    })
-                    .catch((error) => {
-                      console.error('Error loading file:', error);
-                    });
-                }}>
-                  {file}
-                </li>
+               <li key={index} className="list-group-item" onClick={() => {
+                axios.get(`http://localhost:5001/api/files/${file}`)
+                  .then((response) => {
+                    setMarkdownText(response.data);
+                  })
+                  .catch((error) => {
+                    console.error('Error loading file:', error);
+                  });
+              }}>
+                {file}
+              </li>
+              
               ))}
             </ul>
           </div>
@@ -193,11 +194,29 @@ Happy writing!`);
               ></textarea>
             </div>
             <div ref={previewRef} className="preview-area p-3" style={{ overflow: 'auto', height: '100%', minHeight: '100%' }} onScroll={syncScrollReverse}>
-              <div
-                className="markdown-preview"
-                style={{ height: '100%', cursor: 'text' }}
-                dangerouslySetInnerHTML={{ __html: marked(markdownText) }}
-              ></div>
+          <div
+            className="markdown-preview"
+            style={{ height: '100%', cursor: 'text' }}
+            dangerouslySetInnerHTML={{ __html: marked(markdownText) }}
+            onClick={(e) => {
+              if (e.target.tagName === 'INPUT' && e.target.type === 'checkbox') {
+                const checkboxIndex = [...document.querySelectorAll('.markdown-preview input[type="checkbox"]')].indexOf(e.target);
+                const updatedText = markdownText.split('\n').map((line, index) => {
+                  if (line.includes('[ ]') || line.includes('[x]')) {
+                    if (checkboxIndex === index) {
+                      if (line.includes('[ ]')) {
+                        return line.replace('[ ]', '[x]');
+                      } else if (line.includes('[x]')) {
+                        return line.replace('[x]', '[ ]');
+                      }
+                    }
+                  }
+                  return line;
+                  }).join('\n');
+                  setMarkdownText(updatedText);
+            }
+          }}
+          ></div>
             </div>
           </SplitPane>
         </SplitPane>
